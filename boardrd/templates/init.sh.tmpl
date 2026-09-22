@@ -210,10 +210,20 @@ fi
 ROOT_DEV="$ROOT"
 case "$ROOT" in
     PARTUUID=*|UUID=*|LABEL=*)
-        ROOT_DEV=$(findfs "$ROOT" 2>/dev/null) || {
-            echo "boardrd: cannot resolve $ROOT"
-            exec /bin/sh
-        } ;;
+        count=0
+        while true; do
+            ROOT_DEV=$(findfs "$ROOT" 2>/dev/null)
+            [ -n "$ROOT_DEV" ] && break
+            if [ $ROOTWAIT -eq 0 ] && [ $count -ge $ROOTDELAY ]; then
+                log "cannot resolve $ROOT after ${count}s — dropping to shell"
+                exec /bin/sh
+            fi
+            sleep 1
+            count=$(( count + 1 ))
+            [ $(( count % 5 )) -eq 0 ] && log "still waiting to resolve $ROOT ($count s)"
+        done
+        log "resolved $ROOT → $ROOT_DEV"
+        ;;
 esac
 
 # --------------------------------------------------------------------------
