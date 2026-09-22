@@ -14,6 +14,9 @@ workflows:
     boot_nodes:
       - mmc0    # eMMC
       - mmc1    # SD card
+    extra_modules:
+      - tps6594_i2c        # TPS6593/6594 PMIC I2C driver (MFD, supplies SD card vqmmc)
+      - tps6594_regulator  # TPS6593/6594 PMIC regulators (MFD child, not DT-discoverable)
   - name: nfs
     boot_nodes:
       - ethernet0
