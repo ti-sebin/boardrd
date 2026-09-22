@@ -207,12 +207,38 @@ fi
 # --------------------------------------------------------------------------
 # Resolve root device (PARTUUID=/UUID=/LABEL= → /dev/ path)
 # --------------------------------------------------------------------------
+
+# MBR PARTUUID (format: xxxxxxxx-pp) is not supported by busybox findfs.
+# Resolve it manually by reading the 4-byte disk signature at MBR offset 440.
+resolve_mbr_partuuid() {
+    local partuuid="$1"
+    local target_sig part_num bytes sig result disk
+    echo "$partuuid" | grep -qE '^[0-9a-f]{8}-[0-9a-f]{2}$' || return 1
+    target_sig=$(echo "$partuuid" | cut -d- -f1)
+    part_num=$(printf "%d" "0x$(echo "$partuuid" | cut -d- -f2)")
+    for disk in /dev/mmcblk? /dev/sd?; do
+        [ -b "$disk" ] || continue
+        bytes=$(od -A n -t x1 -j 440 -N 4 "$disk" 2>/dev/null)
+        bytes="${bytes// /}"
+        [ ${#bytes} -eq 8 ] || continue
+        sig="${bytes:6:2}${bytes:4:2}${bytes:2:2}${bytes:0:2}"
+        if [ "$sig" = "$target_sig" ]; then
+            result="${disk}p${part_num}"
+            [ -b "$result" ] && echo "$result" && return 0
+        fi
+    done
+    return 1
+}
+
 ROOT_DEV="$ROOT"
 case "$ROOT" in
     PARTUUID=*|UUID=*|LABEL=*)
         count=0
         while true; do
             ROOT_DEV=$(findfs "$ROOT" 2>/dev/null)
+            if [ -z "$ROOT_DEV" ] && echo "$ROOT" | grep -q '^PARTUUID='; then
+                ROOT_DEV=$(resolve_mbr_partuuid "${ROOT#PARTUUID=}")
+            fi
             [ -n "$ROOT_DEV" ] && break
             if [ $ROOTWAIT -eq 0 ] && [ $count -ge $ROOTDELAY ]; then
                 log "cannot resolve $ROOT after ${count}s — dropping to shell"

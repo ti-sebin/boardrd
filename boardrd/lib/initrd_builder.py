@@ -37,7 +37,7 @@ _REQUIRED_APPLETS = [
     # Filesystem / device
     'mkdir', 'mknod', 'ls',
     # Text / parsing
-    'echo', 'cat', 'grep', 'cut', 'sleep',
+    'echo', 'cat', 'grep', 'cut', 'sleep', 'tr', 'od', 'sed',
     # Diagnostics
     'dmesg', 'ps', 'free',
 ]
