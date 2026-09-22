@@ -387,6 +387,13 @@ def run_build(cfg):
                 mode_to_modules[wf_name] = set()
             mode_to_modules[wf_name].update(dt_modules)
 
+            extra = wf_entry.get('extra_modules', [])
+            if extra:
+                extra_mods = resolver.resolve_anchors(extra)
+                log.info("    %d extra_modules → %d modules: %s",
+                         len(extra), len(extra_mods), ', '.join(sorted(extra)))
+                mode_to_modules[wf_name].update(extra_mods)
+
     # --- Resolve .ko paths for all modules ---
     all_module_names = set()
     for mods in mode_to_modules.values():
@@ -611,6 +618,9 @@ def _dry_run_list(cfg):
             for dtb in dtbs:
                 compatibles = get_compatibles(dtb, boot_nodes)
                 all_modules.update(resolver.resolve_compatibles(compatibles))
+            extra = wf_entry.get('extra_modules', [])
+            if extra:
+                all_modules.update(resolver.resolve_anchors(extra))
 
     for name in sorted(all_modules):
         path = resolver.ko_path(name)
